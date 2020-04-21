@@ -1,10 +1,7 @@
 package com.luckyframe.project.monitor.job.task;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.net.ConnectException;
-import java.security.KeyManagementException;
-import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
@@ -51,8 +48,7 @@ public class RunAutomationTestTask
 		runAutomationTestTask = this;
 	}
 	
-    public void runTask(String params) throws UnsupportedEncodingException, IOException,ConnectException
-    {        
+    public void runTask(String params) throws IOException {
 		TaskScheduling taskScheduling = taskSchedulingService.selectTaskSchedulingById(Integer.valueOf(params));
 		
 		if(null!=taskScheduling){
@@ -71,18 +67,12 @@ public class RunAutomationTestTask
 			runTaskEntity.setSchedulingName(taskScheduling.getSchedulingName());
 			runTaskEntity.setLoadPath(taskScheduling.getClientDriverPath());
 			try {
-				HttpRequest.httpClientPost(url, JSONObject.toJSONString(runTaskEntity),3000);
+				HttpRequest.httpClientPost(url, taskScheduling.getClient(), JSONObject.toJSONString(runTaskEntity),3000);
 			} catch (ConnectException e) {
 				// TODO Auto-generated catch block
 				log.error("测试任务执行，远程链接客户端出现异常...");
 				taskExecute.setTaskStatus(4);
 				taskExecuteService.updateTaskExecute(taskExecute);
-			} catch (KeyManagementException e) {
-				// TODO Auto-generated catch block
-				log.error("测试任务执行，远程链接客户端出现异常...");
-			} catch (NoSuchAlgorithmException e) {
-				// TODO Auto-generated catch block
-				log.error("测试任务执行，远程链接客户端出现异常...");
 			}
 		}
     }

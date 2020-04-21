@@ -5,7 +5,6 @@ import java.util.concurrent.Future;
 
 import org.quartz.DisallowConcurrentExecution;
 import org.quartz.JobExecutionContext;
-import org.quartz.JobExecutionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
@@ -36,14 +35,13 @@ public class ScheduleJob extends QuartzJobBean
     private ThreadPoolTaskExecutor executor = SpringUtils.getBean("threadPoolTaskExecutor");
 
     @Override
-    protected void executeInternal(JobExecutionContext context) throws JobExecutionException
-    {
+    protected void executeInternal(JobExecutionContext context) {
         Job job = new Job();
         BeanUtils.copyBeanProp(job, context.getMergedJobDataMap().get(ScheduleConstants.TASK_PROPERTIES));
 
-        IJobLogService jobLogService = (IJobLogService) SpringUtils.getBean(IJobLogService.class);
+        IJobLogService jobLogService = SpringUtils.getBean(IJobLogService.class);
         
-        IJobService jobService = (IJobService) SpringUtils.getBean(IJobService.class);
+        IJobService jobService = SpringUtils.getBean(IJobService.class);
 
         JobLog jobLog = new JobLog();
         jobLog.setJobName(job.getJobName());

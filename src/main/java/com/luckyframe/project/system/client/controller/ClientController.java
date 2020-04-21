@@ -3,6 +3,10 @@ package com.luckyframe.project.system.client.controller;
 import java.util.HashMap;
 import java.util.List;
 
+import com.luckyframe.common.netty.NettyChannelMap;
+import com.luckyframe.common.netty.NettyServer;
+import io.netty.channel.Channel;
+import io.netty.channel.socket.SocketChannel;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -36,6 +40,8 @@ import com.luckyframe.project.system.client.domain.Client;
 import com.luckyframe.project.system.client.service.IClientService;
 import com.luckyframe.project.system.project.service.IProjectService;
 
+import javax.annotation.Resource;
+
 /**
  * 客户端管理 信息操作处理
  * 
@@ -46,8 +52,6 @@ import com.luckyframe.project.system.project.service.IProjectService;
 @RequestMapping("/system/client")
 public class ClientController extends BaseController
 {
-    private String prefix = "system/client";
-	
 	@Autowired
 	private IClientService clientService;
 	
@@ -56,12 +60,15 @@ public class ClientController extends BaseController
     
     @Autowired
     private IJobService jobService;
+
+	@Resource
+	private NettyChannelMap nettyChannelMap;
 	
 	@RequiresPermissions("system:client:view")
 	@GetMapping()
 	public String client()
 	{
-	    return prefix + "/client";
+	    return "system/client/client";
 	}
 	
 	/**
@@ -83,8 +90,8 @@ public class ClientController extends BaseController
     {
     	Client client = clientService.selectClientById(clientId);
 		String result = HttpRequest.httpClientGet(
-				"http://" + client.getClientIp() + ":" + ClientConstants.CLIENT_MONITOR_PORT + "/getClientMonitorData",
-				new HashMap<String, Object>(0),15000);
+				"http://" + client.getClientIp() + ":" + ClientConstants.CLIENT_MONITOR_PORT + "/getClientMonitorData",client,
+				new HashMap<>(0),15000);
 		System.out.println(result);
 		JSONObject jSONObject = JSONObject.parseObject(result);
 		System.out.println(jSONObject.toJSONString());
@@ -92,7 +99,7 @@ public class ClientController extends BaseController
 		SetServer server = JSONObject.parseObject(jSONObject.toJSONString(),SetServer.class);
 		System.out.println(JSONObject.toJSONString(server));
         mmap.put("server", server);
-        return prefix + "/showMonitor";
+        return "system/client/showMonitor";
     }
 	
 	/**
@@ -104,7 +111,7 @@ public class ClientController extends BaseController
     public AjaxResult export(Client client)
     {
     	List<Client> list = clientService.selectClientList(client);
-        ExcelUtil<Client> util = new ExcelUtil<Client>(Client.class);
+        ExcelUtil<Client> util = new ExcelUtil<>(Client.class);
         return util.exportExcel(list, "client");
     }
 	
@@ -115,7 +122,7 @@ public class ClientController extends BaseController
 	public String add(ModelMap mmap)
 	{
         mmap.put("projects", projectService.selectProjectAll(0));
-	    return prefix + "/add";
+	    return "system/client/add";
 	}
 	
 	/**
@@ -134,7 +141,7 @@ public class ClientController extends BaseController
 			}		
 		}
 		
-		int result = 0;
+		int result;
 		Job job=new Job();
     	job.setJobName(JobConstants.JOB_JOBNAME_FOR_CLIENTHEART);
     	job.setJobGroup(JobConstants.JOB_GROUPNAME_FOR_CLIENTHEART);
@@ -142,7 +149,7 @@ public class ClientController extends BaseController
     	job.setMethodParams(client.getClientIp());
     	job.setCronExpression("0/"+client.getCheckinterval().toString()+" * * * * ? ");
     	job.setMisfirePolicy(ScheduleConstants.MISFIRE_DO_NOTHING);
-    	job.setStatus(JobConstants.JOB_STATUS_FOR_CLIENTHEART);
+    	job.setStatus(JobConstants.JOB_STATUS_FOR_RUN);
     	job.setRemark("");
     	/*在公共调度表中插入数据*/
     	result = jobService.insertJobCron(job);
@@ -164,7 +171,7 @@ public class ClientController extends BaseController
 		Client client = clientService.selectClientById(clientId);
 		mmap.put("projects", projectService.selectProjectsByClientId(clientId));
 		mmap.put("client", client);
-	    return prefix + "/edit";
+	    return "system/client/edit";
 	}
 	
 	/**
@@ -176,21 +183,36 @@ public class ClientController extends BaseController
 	@ResponseBody
 	public AjaxResult editSave(Client client)
 	{
+		/*不允许通过服务端修改netty方式的客户端IP
+		* */
+		Client oldClient=clientService.selectClientById(client.getClientId());
+		if(oldClient!=null&&oldClient.getClientType().equals(1))
+		{
+			client.setStatus(1);
+			if(!oldClient.getClientIp().equals(client.getClientIp()))
+				return error("Netty客户端，请在客户端配置文件修改IP、名称");
+		}
 		for(Integer projectId:client.getProjectIds()){
 			if(!PermissionUtils.isProjectPermsPassByProjectId(projectId)){				
 				return error("没有项目【"+projectService.selectProjectById(projectId).getProjectName()+"】修改客户端权限");
 			}		
 		}
-		
-		int result = 0;
-		Job job=jobService.selectJobById(client.getJobId().longValue());
-    	job.setMethodParams(client.getClientIp());
-    	job.setCronExpression("0/"+client.getCheckinterval().toString()+" * * * * ? ");
-    	/*在公共调度表中插入数据*/
-    	result = jobService.updateJob(job);
-    	if(result<1){
-    		return AjaxResult.error();
-    	}
+
+		if(oldClient!=null&&oldClient.getClientType().equals(0)){
+			int result;
+			Job job=jobService.selectJobById(client.getJobId().longValue());
+			job.setMethodParams(client.getClientIp());
+			job.setCronExpression("0/"+client.getCheckinterval().toString()+" * * * * ? ");
+			/*在公共调度表中插入数据*/
+			result = jobService.updateJob(job);
+			if(result<1){
+				return AjaxResult.error();
+			}
+		}else{
+			//更新数据，删除心跳map中的数据
+			NettyServer.clientMap.remove(client.getClientIp());
+		}
+
     	client.setRemark("修改客户端信息，重新初始化");
 		return toAjax(clientService.updateClient(client));
 	}
@@ -206,6 +228,13 @@ public class ClientController extends BaseController
 	{		
         try
         {
+			String[] idList=ids.split(",");
+			for (String s : idList) {
+				Client client = clientService.selectClientById(Integer.valueOf(s));
+				NettyServer.clientMap.remove(client.getClientIp());
+				Channel channel=nettyChannelMap.get(client.getClientIp());
+				nettyChannelMap.remove((SocketChannel)channel);
+			}
         	return toAjax(clientService.deleteClientByIds(ids));
         }
         catch (BusinessException e)
@@ -233,13 +262,11 @@ public class ClientController extends BaseController
     {
         return clientService.checkIpUnique(client);
     }
-    
+
 	/**
-	 * 测试用例Debug运行
-	 * @param listSteps
-	 * @return
-	 * @author Seagull
-	 * @date 2019年3月14日
+	 * 根据客户端IP返回驱动路径
+	 * @param clientId 客户端ID
+	 * @return 返回驱动路径
 	 */
     @GetMapping("/getDriverPathList/{clientId}")
 	@ResponseBody
@@ -252,8 +279,8 @@ public class ClientController extends BaseController
     
 	/**
 	 * 通过项目ID获取客户端列表
-	 * @param projectId
-	 * @return
+	 * @param projectId 项目ID
+	 * @return 返回客户端列表
 	 * @author Seagull
 	 * @date 2019年3月26日
 	 */
@@ -264,5 +291,20 @@ public class ClientController extends BaseController
     	List<Client> clientList = clientService.selectClientsByProjectId(projectId);
 		JSONArray jsonArray = JSONArray.parseArray(JSON.toJSONString(clientList));
 		return jsonArray.toJSONString();
+	}
+    
+	/**
+	 * 根据客户端ID获取状态
+	 * @param clientId 客户端ID
+	 * @return 返回客户端状态
+	 * @author Seagull
+	 * @date 2019年8月16日
+	 */
+    @GetMapping("/getClientStatusByClientId/{clientId}")
+	@ResponseBody
+	public String getClientStatusByClientId(@PathVariable("clientId") Integer clientId)
+	{
+    	Client client = clientService.selectClientById(clientId);
+		return JSONObject.toJSONString(client);
 	}
 }

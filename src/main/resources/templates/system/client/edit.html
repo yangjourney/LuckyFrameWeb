@@ -4,8 +4,10 @@
 <head th:include="include :: header"></head>
 <body class="white-bg">
     <div class="wrapper wrapper-content animated fadeInRight ibox-content">
+        <!--/*@thymesVar id="client" type="java"*/-->
         <form class="form-horizontal m" id="form-client-edit" th:object="${client}">
             <input id="clientId" name="clientId" th:field="*{clientId}"  type="hidden">
+			<input id="clientType" name="clientType" th:field="*{clientType}"  type="hidden">
             <input id="jobId" name="jobId" th:field="*{jobId}"  type="hidden">
             <input id="status" name="status" value='2' type="hidden"/>
 			<div class="form-group">	
@@ -32,7 +34,7 @@
 			<div class="form-group">	
 				<label class="col-sm-3 control-label">驱动路径：</label>
 				<div class="col-sm-8">
-					<input id="clientPath" name="clientPath" th:field="*{clientPath}" class="form-control" type="text">
+					<textarea id="clientPath" rows="5" name="clientPath" th:field="*{clientPath}" class="form-control" type="text"></textarea>
 				</div>
 			</div>
 			<div class="form-group">
@@ -79,7 +81,6 @@
 				},
 				clientIp:{
         			required:true,
-        			isIp:true,
                     remote: {
                         url: ctx + "system/client/checkIpUnique",
                         type: "post",
@@ -107,12 +108,7 @@
 				clientPath:{
         			required:true,
         			minlength: 2,
-        			maxlength: 100,
-				},
-				clientPath:{
-        			required:true,
-        			minlength: 2,
-        			maxlength: 100,
+        			maxlength: 500,
 				},
 			},
         	messages: {
@@ -134,10 +130,11 @@
         function edit() {
         	var clientId = $("input[name='clientId']").val();
         	var jobId = $("input[name='jobId']").val();
+			var clientType = $("input[name='clientType']").val();
         	var clientName = $("input[name='clientName']").val();
         	var clientIp = $("input[name='clientIp']").val();
         	var checkinterval = $("input[name='checkinterval']").val();
-        	var clientPath = $("input[name='clientPath']").val();
+        	var clientPath = $("textarea[name='clientPath']").val();
         	var remark = $("input[name='remark']").val();
         	var status = $("input[name='status']").val();
         	var projectIds = $.form.selectCheckeds("project");
@@ -148,6 +145,7 @@
         		data : {
         			"clientId":clientId,
         			"jobId":jobId,
+					"clientType":clientType,
         			"clientName": clientName,
         			"clientIp": clientIp,
         			"checkinterval": checkinterval,

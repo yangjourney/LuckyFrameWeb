@@ -1,7 +1,9 @@
 package com.luckyframe.project.system.client.mapper;
 
 import com.luckyframe.project.system.client.domain.Client;
-import java.util.List;	
+import org.springframework.stereotype.Component;
+
+import java.util.List;
 
 /**
  * 客户端管理 数据层
@@ -9,6 +11,7 @@ import java.util.List;
  * @author luckyframe
  * @date 2019-02-20
  */
+@Component
 public interface ClientMapper 
 {
 	/**
@@ -85,4 +88,12 @@ public interface ClientMapper
 	 * @date 2019年2月25日
 	 */
 	public Client checkIpUnique(String clientIp);
+
+
+	/**
+	 * 根据客户端名称查找客户端(netty方式)
+	 * @param clientIP
+	 * @return
+	 */
+	public Client selectClientByClientIP(String clientIP);
 }

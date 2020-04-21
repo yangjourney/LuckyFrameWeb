@@ -33,8 +33,6 @@ import com.luckyframe.project.testmanagmt.projectProtocolTemplate.service.IProje
 @RequestMapping("/testmanagmt/projectTemplateParams")
 public class ProjectTemplateParamsController extends BaseController
 {
-    private String prefix = "testmanagmt/projectProtocolTemplate";
-	
 	@Autowired
 	private IProjectTemplateParamsService projectTemplateParamsService;
 
@@ -43,9 +41,8 @@ public class ProjectTemplateParamsController extends BaseController
 	
 	/**
 	 * 修改模板参数
-	 * @param templateId
-	 * @param mmap
-	 * @return
+	 * @param templateId 模板ID
+	 * @param mmap 返回数据模型
 	 * @author Seagull
 	 * @date 2019年3月7日
 	 */
@@ -71,13 +68,13 @@ public class ProjectTemplateParamsController extends BaseController
 			jsonParam.setTemplateId(templateId);
 			jsonParam.setParamName("_forTextJson");
 			jsonParam.setParamValue("");
-			jsonParam.setParamType(1);
+			jsonParam.setParamType(0);
 		}else if(templateParams.size()==1&&"_forTextJson".equals(templateParams.get(0).getParamName())){
 			/*判断是否是RAW JSON单文本格式 */
 			jsonParam.setParamsId(templateParams.get(0).getParamsId());
 			jsonParam.setTemplateId(templateId);
 			jsonParam.setParamName("_forTextJson");
-			jsonParam.setParamType(1);
+			jsonParam.setParamType(0);
 			jsonParam.setParamValue(templateParams.get(0).getParamValue());
 			
 			projectTemplateParams=templateParams.get(0);
@@ -101,7 +98,7 @@ public class ProjectTemplateParamsController extends BaseController
 		mmap.put("templateParams", templateParams);
 		mmap.put("paramsType", paramsType);
 		mmap.put("jsonParam", jsonParam);
-	    return prefix + "/projectTemplateParams";
+	    return "testmanagmt/projectProtocolTemplate/projectTemplateParams";
 	}
 	
 	/**

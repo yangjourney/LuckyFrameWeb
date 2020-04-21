@@ -2,7 +2,8 @@ package com.luckyframe.project.testmanagmt.projectCase.mapper;
 
 import java.util.List;
 
-import com.luckyframe.project.testmanagmt.projectCase.domain.ProjectCase;	
+import com.luckyframe.project.testmanagmt.projectCase.domain.ProjectCase;
+import org.springframework.stereotype.Component;
 
 /**
  * 项目测试用例管理 数据层
@@ -10,6 +11,7 @@ import com.luckyframe.project.testmanagmt.projectCase.domain.ProjectCase;
  * @author luckyframe
  * @date 2019-02-26
  */
+@Component
 public interface ProjectCaseMapper 
 {
 	/**
@@ -18,15 +20,15 @@ public interface ProjectCaseMapper
      * @param caseId 项目测试用例管理ID
      * @return 项目测试用例管理信息
      */
-	public ProjectCase selectProjectCaseById(Integer caseId);
+	ProjectCase selectProjectCaseById(Integer caseId);
 	
 	/**
      * 通过用例编号查询项目测试用例管理信息
      * 
-     * @param caseId 项目测试用例管理ID
+     * @param caseSign 项目测试用例编号
      * @return 项目测试用例管理信息
      */
-	public ProjectCase selectProjectCaseByCaseSign(String caseSign);
+	ProjectCase selectProjectCaseByCaseSign(String caseSign);
 	
 	/**
      * 查询项目测试用例管理列表
@@ -34,16 +36,15 @@ public interface ProjectCaseMapper
      * @param projectCase 项目测试用例管理信息
      * @return 项目测试用例管理集合
      */
-	public List<ProjectCase> selectProjectCaseList(ProjectCase projectCase);
+	List<ProjectCase> selectProjectCaseList(ProjectCase projectCase);
 	
 	/**
 	 * 查询计划中的用例列表
-	 * @param projectCase
-	 * @return
+	 * @param projectCase 测试用例对象
 	 * @author Seagull
 	 * @date 2019年4月10日
 	 */
-	public List<ProjectCase> selectProjectCaseListForPlan(ProjectCase projectCase);
+	List<ProjectCase> selectProjectCaseListForPlan(ProjectCase projectCase);
 	
 	/**
      * 新增项目测试用例管理
@@ -51,7 +52,7 @@ public interface ProjectCaseMapper
      * @param projectCase 项目测试用例管理信息
      * @return 结果
      */
-	public int insertProjectCase(ProjectCase projectCase);
+	int insertProjectCase(ProjectCase projectCase);
 	
 	/**
      * 修改项目测试用例管理
@@ -59,7 +60,7 @@ public interface ProjectCaseMapper
      * @param projectCase 项目测试用例管理信息
      * @return 结果
      */
-	public int updateProjectCase(ProjectCase projectCase);
+	int updateProjectCase(ProjectCase projectCase);
 	
 	/**
      * 删除项目测试用例管理
@@ -67,7 +68,7 @@ public interface ProjectCaseMapper
      * @param caseId 项目测试用例管理ID
      * @return 结果
      */
-	public int deleteProjectCaseById(Integer caseId);
+	int deleteProjectCaseById(Integer caseId);
 	
 	/**
      * 批量删除项目测试用例管理
@@ -75,58 +76,52 @@ public interface ProjectCaseMapper
      * @param caseIds 需要删除的数据ID
      * @return 结果
      */
-	public int deleteProjectCaseByIds(String[] caseIds);
+	int deleteProjectCaseByIds(String[] caseIds);
 	
 	/**
 	 * 检查测试用例名称唯一性
-	 * @param caseName
-	 * @return
+	 * @param projectCase 测试用例对象
 	 * @author Seagull
-	 * @date 2019年2月28日
+	 * @date 2019年10月8日
 	 */
-	public ProjectCase checkProjectCaseNameUnique(String caseName);
+	List<ProjectCase> checkProjectCaseNameUnique(ProjectCase projectCase);
 	
 	/**
 	 * 查询测试用例项目序号
-	 * @param projectId
-	 * @return
+	 * @param projectId 项目ID
 	 * @author Seagull
 	 * @date 2019年3月1日
 	 */
-	public int selectMaxCaseSerialNumberByProjectId(Integer projectId);
+	int selectMaxCaseSerialNumberByProjectId(Integer projectId);
 	
     /**
      * 查询项目下有没有测试用例
-     * @param projectId
-     * @return
+     * @param projectId 项目ID
      * @author Seagull
      * @date 2019年3月4日
      */
-    public int selectProjectCaseCountByProjectId(Integer projectId);
+    int selectProjectCaseCountByProjectId(Integer projectId);
     
     /**
      * 查询用例模块下有没有测试用例
-     * @param projectId
-     * @return
+     * @param moduleId 项目模块ID
      * @author Seagull
      * @date 2019年3月4日
      */
-    public int selectProjectCaseCountByModuleId(Integer moduleId);
+    int selectProjectCaseCountByModuleId(Integer moduleId);
     
     /**
      * 查询总用例数
-     * @return
      * @author Seagull
      * @date 2019年4月28日
      */
-    public int selectProjectCaseCount();
+    int selectProjectCaseCount();
     
     /**
      * 查询指定天数内更新的用例
-     * @param projectCase
-     * @return
+     * @param updateTime 根据更新时间
      * @author Seagull
      * @date 2019年4月28日
      */
-    public int selectProjectCaseCountForThirtyDays(String updateTime);
+    int selectProjectCaseCountForThirtyDays(String updateTime);
 }

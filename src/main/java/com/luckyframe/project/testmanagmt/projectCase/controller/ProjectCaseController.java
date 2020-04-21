@@ -41,8 +41,6 @@ import com.luckyframe.project.testmanagmt.projectCaseModule.service.IProjectCase
 @RequestMapping("/testmanagmt/projectCase")
 public class ProjectCaseController extends BaseController
 {
-    private String prefix = "testmanagmt/projectCase";
-	
 	@Autowired
 	private IProjectCaseService projectCaseService;
 	
@@ -70,7 +68,7 @@ public class ProjectCaseController extends BaseController
         	mmap.put("projectCaseModule", projectCaseModule);
         }
         
-	    return prefix + "/projectCase";
+	    return "testmanagmt/projectCase/projectCase";
 	}
 	
 	/**
@@ -110,7 +108,7 @@ public class ProjectCaseController extends BaseController
 		}
 		
     	List<ProjectCase> list = projectCaseService.selectProjectCaseList(projectCase);
-        ExcelUtil<ProjectCase> util = new ExcelUtil<ProjectCase>(ProjectCase.class);
+        ExcelUtil<ProjectCase> util = new ExcelUtil<>(ProjectCase.class);
         return util.exportExcel(list, "测试用例");
     }
 	
@@ -118,23 +116,22 @@ public class ProjectCaseController extends BaseController
 	 * 新增项目测试用例管理
 	 */
 	@GetMapping("/add")
-	public String add(ModelMap mmap)
-	{
-        List<Project> projects=projectService.selectProjectAll(0);
-        mmap.put("projects", projects);
-        if(projects.size()>0){
-            if(projects.size()>0){
-            	ProjectCaseModule projectCaseModule = new ProjectCaseModule();
-                if(StringUtils.isNotEmpty(ShiroUtils.getProjectId())){
-                	mmap.put("defaultProjectId", ShiroUtils.getProjectId());
-                    projectCaseModule = projectCaseModuleService.selectProjectCaseModuleParentZeroByProjectId(ShiroUtils.getProjectId());
-                }else{
-                	projectCaseModule = projectCaseModuleService.selectProjectCaseModuleParentZeroByProjectId(projects.get(0).getProjectId());
-                }
-            	mmap.put("projectCaseModule", projectCaseModule);
-            }
-        }
-	    return prefix + "/add";
+	public String add(ModelMap mmap) {
+		List<Project> projects = projectService.selectProjectAll(0);
+		mmap.put("projects", projects);
+		if (projects.size() > 0) {
+			ProjectCaseModule projectCaseModule;
+			if (StringUtils.isNotEmpty(ShiroUtils.getProjectId())) {
+				mmap.put("defaultProjectId", ShiroUtils.getProjectId());
+				projectCaseModule = projectCaseModuleService
+						.selectProjectCaseModuleParentZeroByProjectId(ShiroUtils.getProjectId());
+			} else {
+				projectCaseModule = projectCaseModuleService
+						.selectProjectCaseModuleParentZeroByProjectId(projects.get(0).getProjectId());
+			}
+			mmap.put("projectCaseModule", projectCaseModule);
+		}
+		return "testmanagmt/projectCase/add";
 	}
 	
 	/**
@@ -162,7 +159,7 @@ public class ProjectCaseController extends BaseController
 		ProjectCase projectCase = projectCaseService.selectProjectCaseById(caseId);
 		mmap.put("projectCase", projectCase);
     	mmap.put("projectCaseModule", projectCase.getProjectCaseModule());
-	    return prefix + "/edit";
+	    return "testmanagmt/projectCase/edit";
 	}
 	
 	/**
@@ -183,17 +180,29 @@ public class ProjectCaseController extends BaseController
 	
 	/**
 	 * 复制用例
-	 * @param caseId
-	 * @param mmap
-	 * @return
+	 * @param caseId 用例ID
+	 * @param mmap 返回数据模型
 	 * @author Seagull
 	 * @date 2019年3月13日
 	 */
 	@GetMapping("/copy/{caseId}")
-	public String copy(@PathVariable("caseId") Integer caseId, ModelMap mmap)
+	public String copy(@PathVariable("caseId") String caseId, ModelMap mmap)
 	{
-		ProjectCase projectCase = projectCaseService.selectProjectCaseById(caseId);
-		projectCase.setCaseName("Copy【"+projectCase.getCaseName()+"】");
+		ProjectCase projectCase;
+		if(caseId.contains(","))
+		{
+			String[] caseIdArray=caseId.split(",");
+			//批量复制
+			projectCase=projectCaseService.selectProjectCaseById(Integer.valueOf(caseIdArray[0]));
+			mmap.put("caseIdList", caseId);
+		}
+		else
+		{
+			//复制一个
+			projectCase=projectCaseService.selectProjectCaseById(Integer.valueOf(caseId));
+			projectCase.setCaseName("Copy【"+projectCase.getCaseName()+"】");
+		}
+
         List<Project> projects=projectService.selectProjectAll(projectCase.getProjectId());
         mmap.put("projects", projects);
         if(projects.size()>0){
@@ -202,13 +211,61 @@ public class ProjectCaseController extends BaseController
         }
 		mmap.put("projectCase", projectCase);
 		mmap.put("projectCaseModule", projectCase.getProjectCaseModule());
-	    return prefix + "/copy";
+	    return "testmanagmt/projectCase/copy";
 	}
-	
+
+	/**
+	 * 批量复制用例
+	 * @param projectCase 测试用例对象
+	 * @author FJ
+	 * @date 2020年1月13日
+	 */
+	@RequiresPermissions("testmanagmt:projectCase:add")
+	@Log(title = "项目测试用例管理", businessType = BusinessType.INSERT)
+	@PostMapping("/batchCopy")
+	@ResponseBody
+	public AjaxResult batchCopy(ProjectCase projectCase)
+	{
+		if(projectCase.getCaseIdList()==null)
+		{
+			return error("请先选择用例再复制！");
+		}
+		String[] ids =projectCase.getCaseIdList().split(",");
+		int num=0;
+		for (String id : ids) {
+			if(StringUtils.isNotEmpty(id))
+			{
+				Integer caseId=Integer.valueOf(id);
+				ProjectCase copyProjectCase=projectCaseService.selectProjectCaseById(caseId);
+				if(copyProjectCase==null)
+				{
+					continue;
+				}
+				ProjectCaseSteps projectCaseSteps = new ProjectCaseSteps();
+				projectCaseSteps.setCaseId(caseId);
+				List<ProjectCaseSteps> listSteps = projectCaseStepsService.selectProjectCaseStepsList(projectCaseSteps);
+				copyProjectCase.setCaseId(0);
+				copyProjectCase.setCaseName("Copy【"+copyProjectCase.getCaseName()+"】");
+				copyProjectCase.setProjectId(projectCase.getProjectId());
+				copyProjectCase.setModuleId(projectCase.getModuleId());
+				num=projectCaseService.insertProjectCase(copyProjectCase);
+				for(ProjectCaseSteps step:listSteps){
+					step.setStepId(0);
+					step.setCaseId(copyProjectCase.getCaseId());
+					if(!step.getProjectId().equals(copyProjectCase.getProjectId())){
+						step.setProjectId(copyProjectCase.getProjectId());
+						step.setExtend(null);
+					}
+					projectCaseStepsService.insertProjectCaseSteps(step);
+				}
+			}
+		}
+		return toAjax(num);
+	}
+
 	/**
 	 * 复制用例
-	 * @param projectProtocolTemplate
-	 * @return
+	 * @param projectCase 测试用例对象
 	 * @author Seagull
 	 * @date 2019年3月9日
 	 */
@@ -230,6 +287,10 @@ public class ProjectCaseController extends BaseController
 		for(ProjectCaseSteps step:listSteps){
 			step.setStepId(0);
 			step.setCaseId(projectCase.getCaseId());
+			if(!step.getProjectId().equals(projectCase.getProjectId())){
+				step.setProjectId(projectCase.getProjectId());
+				step.setExtend(null);
+			}
 			projectCaseStepsService.insertProjectCaseSteps(step);
 		}
 		return toAjax(num+listSteps.size());
@@ -256,8 +317,7 @@ public class ProjectCaseController extends BaseController
 
     /**
      * 校验测试用例名称唯一性
-     * @param projectCase
-     * @return
+     * @param projectCase 测试用例对象
      * @author Seagull
      * @date 2019年2月28日
      */

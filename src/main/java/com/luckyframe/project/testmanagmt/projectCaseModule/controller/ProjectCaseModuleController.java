@@ -24,6 +24,7 @@ import com.luckyframe.project.system.project.domain.Project;
 import com.luckyframe.project.system.project.service.IProjectService;
 import com.luckyframe.project.testmanagmt.projectCaseModule.domain.ProjectCaseModule;
 import com.luckyframe.project.testmanagmt.projectCaseModule.service.IProjectCaseModuleService;
+import org.springframework.web.multipart.MultipartFile;
 
 /**
  * 测试用例模块管理 信息操作处理
@@ -35,8 +36,6 @@ import com.luckyframe.project.testmanagmt.projectCaseModule.service.IProjectCase
 @RequestMapping("/testmanagmt/projectCaseModule")
 public class ProjectCaseModuleController extends BaseController
 {
-    private String prefix = "testmanagmt/projectCaseModule";
-	
 	@Autowired
 	private IProjectCaseModuleService projectCaseModuleService;
 	
@@ -49,7 +48,7 @@ public class ProjectCaseModuleController extends BaseController
 	{
         List<Project> projects=projectService.selectProjectAll(0);
         mmap.put("projects", projects);
-	    return prefix + "/projectCaseModule";
+	    return "testmanagmt/projectCaseModule/projectCaseModule";
 	}
 	
 	/**
@@ -60,8 +59,7 @@ public class ProjectCaseModuleController extends BaseController
 	@ResponseBody
 	public List<ProjectCaseModule> list(ProjectCaseModule projectCaseModule)
 	{
-        List<ProjectCaseModule> list = projectCaseModuleService.selectProjectCaseModuleList(projectCaseModule);
-		return list;
+		return projectCaseModuleService.selectProjectCaseModuleList(projectCaseModule);
 	}
 	
 	
@@ -74,7 +72,7 @@ public class ProjectCaseModuleController extends BaseController
     public AjaxResult export(ProjectCaseModule projectCaseModule)
     {
     	List<ProjectCaseModule> list = projectCaseModuleService.selectProjectCaseModuleList(projectCaseModule);
-        ExcelUtil<ProjectCaseModule> util = new ExcelUtil<ProjectCaseModule>(ProjectCaseModule.class);
+        ExcelUtil<ProjectCaseModule> util = new ExcelUtil<>(ProjectCaseModule.class);
         return util.exportExcel(list, "projectCaseModule");
     }
 	
@@ -88,7 +86,7 @@ public class ProjectCaseModuleController extends BaseController
 		mmap.put("projectCaseModule",projectCaseModule);
 		mmap.put("projectId",projectCaseModule.getProjectId());
 		mmap.put("maxOrderNum", projectCaseModuleService.selectProjectCaseModuleMaxOrderNumByParentId(moduleId));
-	    return prefix + "/add";
+	    return "testmanagmt/projectCaseModule/add";
 	}
 	
 	/**
@@ -116,7 +114,7 @@ public class ProjectCaseModuleController extends BaseController
 		ProjectCaseModule projectCaseModule=projectCaseModuleService.selectProjectCaseModuleById(moduleId);
 		mmap.put("projectCaseModule", projectCaseModule);
 		mmap.put("parentProjectCaseModule", projectCaseModuleService.selectProjectCaseModuleById(projectCaseModule.getParentId()));
-	    return prefix + "/edit";
+	    return "testmanagmt/projectCaseModule/edit";
 	}
 	
 	/**
@@ -160,9 +158,8 @@ public class ProjectCaseModuleController extends BaseController
 	
     /**
      * 选择模块树
-     * @param moduleId
-     * @param mmap
-     * @return
+     * @param moduleId 模块ID
+     * @param mmap 返回数据模型
      * @author Seagull
      * @date 2019年2月26日
      */
@@ -170,7 +167,7 @@ public class ProjectCaseModuleController extends BaseController
     public String selectProjectCaseModuleTree(@PathVariable("moduleId") Integer moduleId, ModelMap mmap)
     {
         mmap.put("projectCaseModule", projectCaseModuleService.selectProjectCaseModuleById(moduleId));
-        return prefix + "/tree";
+        return "testmanagmt/projectCaseModule/tree";
     }
 
     /**
@@ -182,8 +179,7 @@ public class ProjectCaseModuleController extends BaseController
     {
     	ProjectCaseModule projectCaseModule=new ProjectCaseModule();
     	projectCaseModule.setProjectId(projectId);
-        List<Map<String, Object>> tree = projectCaseModuleService.selectProjectCaseModuleTree(projectCaseModule);
-        return tree;
+		return projectCaseModuleService.selectProjectCaseModuleTree(projectCaseModule);
     }
 
     /**
@@ -193,7 +189,38 @@ public class ProjectCaseModuleController extends BaseController
     @ResponseBody
     public ProjectCaseModule getModuleByProjectId(@PathVariable("projectId") Integer projectId)
     {
-    	ProjectCaseModule projectCaseModule = projectCaseModuleService.selectProjectCaseModuleParentZeroByProjectId(projectId);
-        return projectCaseModule;
+		return projectCaseModuleService.selectProjectCaseModuleParentZeroByProjectId(projectId);
     }
+
+	/**
+	 * 批量导入用例模块
+	 * @param file 文件对象
+	 * @author summer
+	 * @date 2020/02/26
+	 */
+	@Log(title = "用例模块", businessType = BusinessType.IMPORT)
+	@RequiresPermissions("testmanagmt:projectCaseModule:import")
+	@PostMapping("/import")
+	@ResponseBody
+	public AjaxResult importProjectCaseModules(MultipartFile file) throws Exception
+	{
+		ExcelUtil<ProjectCaseModule> util = new ExcelUtil<>(ProjectCaseModule.class);
+		List<ProjectCaseModule> modulesList = util.importExcel(file.getInputStream());
+		String message = projectCaseModuleService.importProjectCaseModules(modulesList);
+		return AjaxResult.success(message);
+	}
+
+	/**
+	 * 下载导入模板
+	 * @author summer
+	 * @date 2020/02/26
+	 */
+	@RequiresPermissions("testmanagmt:projectCaseModule:view")
+	@GetMapping("/importTemplate")
+	@ResponseBody
+	public AjaxResult importTemplate()
+	{
+		ExcelUtil<ProjectCaseModule> util = new ExcelUtil<>(ProjectCaseModule.class);
+		return util.importTemplateExcel("用例模块");
+	}
 }

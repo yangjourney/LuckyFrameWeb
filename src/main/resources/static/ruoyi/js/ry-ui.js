@@ -101,12 +101,14 @@
 			tooltip: function (value, length) {
 				var _length = $.common.isEmpty(length) ? 20 : length;
 				var _text = "";
-				if (value.length > _length) {
+				if (null==value) {
+					_text = "";
+				} else if(value.length > _length){
 					_text = value.substr(0, _length) + "...";
-				} else {
+				}else {
 					_text = value;
 				}
-				return '<a href="#" class="tooltip-show" data-toggle="tooltip" title="' + value + '">' + _text +'</a>';
+				return '<div data-html="true" data-toggle="tooltip" data-placement="left" title="<div align=&quot;left&quot; style=&quot;word-wrap:break-word&quot;>' + value +'</div>">' + _text +'</div>';
 			},
             // 搜索-默认第一个form
             search: function(formId) {
@@ -197,6 +199,54 @@
             			});
             		}
             	});
+            },
+            // 导入模块,added by summer,2020/2/26，刷新树结构table
+            importExcel2: function(formId) {
+                var currentId = $.common.isEmpty(formId) ? 'importForm' : formId;
+                $.form.reset(currentId);
+                layer.open({
+                    type: 1,
+                    area: ['400px', '230px'],
+                    fix: false,
+                    //不固定
+                    maxmin: true,
+                    shade: 0.3,
+                    title: '导入' + $.table._option.modalName + '数据',
+                    content: $('#' + currentId),
+                    btn: ['<i class="fa fa-check"></i> 导入', '<i class="fa fa-remove"></i> 取消'],
+                    // 弹层外区域关闭
+                    shadeClose: true,
+                    btn1: function(index, layero){
+                        var file = layero.find('#file').val();
+                        if (file == '' || (!$.common.endWith(file, '.xls') && !$.common.endWith(file, '.xlsx'))){
+                            $.modal.msgWarning("请选择后缀为 “xls”或“xlsx”的文件。");
+                            return false;
+                        }
+                        var index = layer.load(2, {shade: false});
+                        $.modal.disable();
+                        var formData = new FormData();
+                        formData.append("file", $('#file')[0].files[0]);
+                        $.ajax({
+                            url: $.table._option.importUrl,
+                            data: formData,
+                            cache: false,
+                            contentType: false,
+                            processData: false,
+                            type: 'POST',
+                            success: function (result) {
+                                if (result.code == web_status.SUCCESS) {
+                                    $.modal.closeAll();
+                                    $.modal.alertSuccess(result.msg);
+                                    $.treeTable.refresh();   //刷新树结构table
+                                } else {
+                                    layer.close(index);
+                                    $.modal.enable();
+                                    $.modal.alertError(result.msg);
+                                }
+                            }
+                        });
+                    }
+                });
             },
             // 刷新表格
             refresh: function() {
@@ -684,7 +734,7 @@
             		}
             	    url = $.table._option.copyUrl.replace("{id}", id);
             	}
-            	$.modal.open("复制" + $.table._option.modalName, url);
+				$.modal.open("复制" + $.table._option.modalName, url);
             },
             // 工具栏表格树修改
             editTree: function() {
@@ -721,7 +771,7 @@
             	    var row = $.common.isEmpty($.table._option.uniqueId) ? $.table.selectFirstColumns() : $.table.selectColumns($.table._option.uniqueId);
             	    url = $.table._option.customUrl.replace("{id}", row);
             	}
-            	$.modal.openFull($.table._option.childrenModalName, url);
+            	$.modal.openFull($.table._option.childrenModalName, url, null, null, "保存");
             },
             // 保存信息
             save: function(url, data) {

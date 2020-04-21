@@ -45,8 +45,6 @@ import com.luckyframe.project.testexecution.taskScheduling.service.ITaskScheduli
 @RequestMapping("/testexecution/taskExecute")
 public class TaskExecuteController extends BaseController
 {
-    private String prefix = "testexecution/taskExecute";
-	
 	@Autowired
 	private ITaskExecuteService taskExecuteService;
 	
@@ -75,13 +73,16 @@ public class TaskExecuteController extends BaseController
         }else{
         	String endDateStr = DateUtils.getDate();
         	String startDateStr = DateUtils.getDateByNum(-7);
+			if(StringUtils.isNotEmpty(ShiroUtils.getDateQuantum())){
+				startDateStr = DateUtils.getDateByNum(1-ShiroUtils.getDateQuantum());
+			}
         	mmap.put("endDateStr", endDateStr);
         	mmap.put("startDateStr", startDateStr);
         	if(StringUtils.isNotEmpty(ShiroUtils.getProjectId())){
             	mmap.put("defaultProjectId", ShiroUtils.getProjectId());
             }
         }
-	    return prefix + "/taskExecute";
+	    return "testexecution/taskExecute/taskExecute";
 	}
 	
 	/**
@@ -95,7 +96,7 @@ public class TaskExecuteController extends BaseController
 		startPage();
 		//如果不带任何查询条件，默认查询7天内记录
 		if(null==taskExecute.getSchedulingId()&&taskExecute.getParams().size()==0){
-			Map<String, Object> params = new HashMap<String, Object>();
+			Map<String, Object> params = new HashMap<>();
         	String endDateStr = DateUtils.getDate();
         	String startDateStr = DateUtils.getDateByNum(-7);
         	params.put("beginTime", startDateStr);
@@ -116,7 +117,7 @@ public class TaskExecuteController extends BaseController
     public AjaxResult export(TaskExecute taskExecute)
     {
     	List<TaskExecute> list = taskExecuteService.selectTaskExecuteList(taskExecute);
-        ExcelUtil<TaskExecute> util = new ExcelUtil<TaskExecute>(TaskExecute.class);
+        ExcelUtil<TaskExecute> util = new ExcelUtil<>(TaskExecute.class);
         return util.exportExcel(list, "taskExecute");
     }
 	
@@ -126,7 +127,7 @@ public class TaskExecuteController extends BaseController
 	@GetMapping("/add")
 	public String add()
 	{
-	    return prefix + "/add";
+	    return "testexecution/taskExecute/add";
 	}
 	
 	/**
@@ -149,7 +150,7 @@ public class TaskExecuteController extends BaseController
 	{
 		TaskExecute taskExecute = taskExecuteService.selectTaskExecuteById(taskId);
 		mmap.put("taskExecute", taskExecute);
-	    return prefix + "/edit";
+	    return "testexecution/taskExecute/edit";
 	}
 	
 	/**
@@ -185,8 +186,8 @@ public class TaskExecuteController extends BaseController
 	
 	/**
 	 * 通过项目ID获取执行任务列表
-	 * @param projectId
-	 * @return
+	 * @param projectId 项目ID
+	 * @return 根据项目ID返回调度列表
 	 * @author Seagull
 	 * @date 2019年4月24日
 	 */
